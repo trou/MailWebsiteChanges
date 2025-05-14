@@ -69,12 +69,13 @@ def toAbsoluteURIs(trees, baseuri):
 
 
 class URLReceiver(Receiver):
-    def __init__(self, uri, contenttype='html', encoding='utf-8', userAgent=None, accept=None):
+    def __init__(self, uri, contenttype='html', encoding='utf-8', userAgent=None, accept=None, data=None):
         super().__init__(uri)
         self.contenttype = contenttype
         self.encoding = encoding
         self.userAgent = userAgent
         self.accept = accept
+        self.data = data
 
     # input: [Content], output: [Content]
     def performAction(self, contentList=None):
@@ -82,11 +83,13 @@ class URLReceiver(Receiver):
             contentList = []
         
         # open website
-        req = urllib.request.Request(self.uri)
+        req = urllib.request.Request(self.uri, data=self.data)
         if self.userAgent is not None:
             req.add_header('User-Agent', self.userAgent)
         if self.accept is not None:
             req.add_header('Accept', self.accept)
+        if self.contenttype is not None:
+            req.add_header('content-type', self.contenttype)
 
         with urllib.request.urlopen(req) as thefile:
             filecontent = thefile.read().decode(self.encoding, errors='ignore')

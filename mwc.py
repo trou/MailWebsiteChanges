@@ -26,6 +26,8 @@ from time import strftime
 import random
 
 import importlib
+import logging
+
 config = None
 
 defaultEncoding = 'utf-8'
@@ -42,6 +44,13 @@ emptyfeed = """<?xml version="1.0"?>
 
 mailsession = None
 
+# Setup logger
+logger = logging.getLogger("mwc")
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+formatter = logging.Formatter('%(levelname)s: %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 # generates a new RSS feed item
 def genFeedItem(subject, content, link, change):
@@ -130,7 +139,6 @@ def runParsers(parsers, contentList=None):
 
 def pollWebsites():
     global defaultEncoding
-
     # parse existing feed or create a new one
     rssfile = config.rssfile
     if not os.path.isabs(rssfile):
@@ -145,7 +153,7 @@ def pollWebsites():
     # start polling sites
     mailsSent = 0
     for site in config.sites:
-        print('polling site [' + site['name'] + '] ...')
+        logger.debug('polling site [' + site['name'] + '] ...')
         receiver = site.get('receiver', config.receiver)
 
         try:
@@ -153,7 +161,7 @@ def pollWebsites():
         except Exception as e:
             # if something went wrong, notify the user
             subject = '[' + site['name'] + '] WARNING'
-            print('WARNING: ' + str(e))
+            logger.warning('WARNING: ' + str(e))
             if config.enableMailNotifications:
                 if config.maxMailsPerSession == -1 or mailsSent < config.maxMailsPerSession:
                     sendmail(receivers=[receiver], subject=subject, content=str(e), sendAsHtml=False, link=None)
@@ -174,7 +182,7 @@ def pollWebsites():
                     changedContents.append(content)
 
                     subject = '[' + site['name'] + '] ' + ("Update available" if content.title is None else content.title)
-                    print('    ' + subject)
+                    logger.info('    ' + subject)
                     if config.enableMailNotifications and len(fileHashes) > 0:
                         sendAsHtml = (content.contenttype == 'html')
                         contentReceivers = [receiver]
@@ -195,7 +203,7 @@ def pollWebsites():
             if site.get("keepHashes", False):
                 sessionHashes.extend(fileHashes)
             storeHashes(site['name'], sessionHashes)
-            print('        ' + str(len(changedContents)) + ' updates')
+            logger.info('        ' + str(len(changedContents)) + ' updates')
 
     # store feed
     if config.enableRSSFeed:
@@ -231,16 +239,16 @@ if __name__ == "__main__":
             if thesite['name'] == args.dry_run:
                 parseResult = runParsers(thesite['parsers'])
                 for p in parseResult:
-                    print(p.title)
-                    print(p.content)
-                print(str(len(parseResult)) + " results")
+                    logger.info(f"title: {p.title}")
+                    logger.info(f"content: {p.content}")
+                logger.info(str(len(parseResult)) + " results")
                 break
     else:
         try:
             pollWebsites()
         except:
             msg = str(sys.exc_info()[0]) + '\n\n' + traceback.format_exc()
-            print(msg)
+            logger.error(msg)
             if config.receiver != '':
                 sendmail(receivers=[config.receiver], subject='[mwc] Something went wrong ...', content=msg, sendAsHtml=False, link=None)
 

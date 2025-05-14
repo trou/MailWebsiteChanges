@@ -246,7 +246,7 @@ if __name__ == "__main__":
     else:
         try:
             pollWebsites()
-        except:
+        except Exception:
             msg = str(sys.exc_info()[0]) + '\n\n' + traceback.format_exc()
             logger.error(msg)
             if config.receiver != '':

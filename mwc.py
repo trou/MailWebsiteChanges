@@ -225,12 +225,16 @@ if __name__ == "__main__":
                       help='name of site to do a dry run for')
     parser.add_argument('-q', '--quiet', dest='quiet', action='store_true',
                       help='suppress all output')
+    parser.add_argument('-v', '--verbose', dest='verbose', action='store_true',
+                      help='verbose output')
     args = parser.parse_args()
 
     config = importlib.import_module(args.config)
 
     if args.quiet:
         logger.setLevel(logging.WARNING)
+    elif args.verbose:
+        logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
 

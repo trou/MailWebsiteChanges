@@ -6,6 +6,7 @@
 
 #test
 
+import argparse
 import io
 from lxml import etree
 import hashlib
@@ -208,25 +209,26 @@ if __name__ == "__main__":
     configMod = 'config'
     dryrun = None
 
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], 'hc:d:', ['help', 'config=', 'dry-run='])
-    except getopt.GetoptError:
-        print('Usage: mwc.py --config=config --dry-run=name')
-        sys.exit(1)
-    for opt, arg in opts:
-        if opt == '-h':
-            print('Usage: mwc.py --config=config')
-            exit()
-        elif opt in ('-c', '--config'):
-            configMod = arg
-        elif opt in ('-d', '--dry-run'):
-            dryrun = arg
+    parser = argparse.ArgumentParser(description='Mail Website Changes')
+    parser.add_argument('-c', '--config', dest='config',
+                      default='config',
+                      help='config module to use')
+    parser.add_argument('-d', '--dry-run', dest='dry_run',
+                      help='name of site to do a dry run for')
+    parser.add_argument('-q', '--quiet', dest='quiet', action='store_true',
+                      help='suppress all output')
+    args = parser.parse_args()
 
-    config = importlib.import_module(configMod)
+    config = importlib.import_module(args.config)
 
-    if dryrun:
+    if args.quiet:
+        logger.setLevel(logging.WARNING)
+    else:
+        logger.setLevel(logging.INFO)
+
+    if args.dry_run:
         for thesite in config.sites:
-            if thesite['name'] == dryrun:
+            if thesite['name'] == args.dry_run:
                 parseResult = runParsers(thesite['parsers'])
                 for p in parseResult:
                     print(p.title)

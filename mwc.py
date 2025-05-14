@@ -27,6 +27,8 @@ import random
 
 import importlib
 import logging
+import difflib
+from pathlib import Path
 
 config = None
 
@@ -111,7 +113,7 @@ def sendmail(receivers, subject, content, sendAsHtml, link, encoding=None):
 # returns a list of all content that is stored locally for a specific site
 def getStoredHashes(name):
     result = []
-    filename = os.path.join(config.workingDirectory, name + ".txt")
+    filename = get_site_cache_path(name, ".hash")
     if os.path.exists(filename):
         with open(filename, 'r') as thefile:
             for line in thefile:
@@ -122,7 +124,7 @@ def getStoredHashes(name):
 
 # updates list of content that is stored locally for a specific site
 def storeHashes(name, contentHashes):
-    with open(os.path.join(config.workingDirectory, name + '.txt'), 'w') as thefile:
+    with open(get_site_cache_path(name, ".hash"), 'w') as thefile:
         for h in contentHashes:
             thefile.write(h + "\n")
 
@@ -136,6 +138,33 @@ def runParsers(parsers, contentList=None):
 
     return contentList
 
+
+# Helper to get cache file path for a site
+def get_site_cache_path(site_name, extension):
+    cache_dir = Path(config.workingDirectory)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    return cache_dir / f"{site_name}{extension}"
+
+# Helper to diff and store content
+def diff_and_store(site_name, new_content, encoding='utf-8'):
+    cache_path = get_site_cache_path(site_name, ".cache")
+    if cache_path.exists():
+        with cache_path.open('r', encoding=encoding, errors='replace') as f:
+            old_content = f.read()
+        diff = list(difflib.unified_diff(
+            old_content.splitlines(),
+            new_content.splitlines(),
+            fromfile='previous',
+            tofile='current',
+            lineterm=''
+        ))
+        with cache_path.open('w', encoding=encoding) as f:
+            f.write(new_content)
+        return '\n'.join(diff)
+    else:
+        with cache_path.open('w', encoding=encoding) as f:
+            f.write(new_content)
+        return None
 
 def pollWebsites():
     global defaultEncoding
@@ -155,7 +184,8 @@ def pollWebsites():
     for site in config.sites:
         logger.debug('polling site [' + site['name'] + '] ...')
         receiver = site.get('receiver', config.receiver)
-
+        diff_mode = site.get('diff', False)
+        logger.info(f"diff_mode: {diff_mode}")
         try:
             contentList = runParsers(site['parsers'])
         except Exception as e:
@@ -182,17 +212,29 @@ def pollWebsites():
                     changedContents.append(content)
 
                     subject = '[' + site['name'] + '] ' + ("Update available" if content.title is None else content.title)
+                    display_content = content.content
+                    if diff_mode:
+                        logger.debug(f"site['name']: {site['name']}, diff_mode: {diff_mode}")
+                        diff = diff_and_store(site['name'], content.content, encoding=content.encoding)
+                        if diff:
+                            display_content = diff
+                        else:
+                            display_content = '(no previous version, nothing to diff)'
                     logger.info('    ' + subject)
+                    logger.info(display_content)
                     if config.enableMailNotifications and len(fileHashes) > 0:
-                        sendAsHtml = (content.contenttype == 'html')
+                        if diff_mode:
+                            sendAsHtml = False
+                        else:
+                            sendAsHtml = (content.contenttype == 'html')
                         contentReceivers = [receiver]
                         if content.receivers is not None:
                             contentReceivers.extend(content.receivers)
-                        sendmail(receivers=contentReceivers, subject=subject, content=content.content, sendAsHtml=sendAsHtml, link=content.uri, encoding=content.encoding)
+                        sendmail(receivers=contentReceivers, subject=subject, content=display_content, sendAsHtml=sendAsHtml, link=content.uri, encoding=content.encoding)
                         mailsSent = mailsSent + 1
 
                     if config.enableRSSFeed:
-                        feedXML.xpath('//channel')[0].append(genFeedItem(subject, content.content, content.uri, len(changedContents)))
+                        feedXML.xpath('//channel')[0].append(genFeedItem(subject, display_content, content.uri, len(changedContents)))
             else:
                 sessionHashes.append(contenthash)
 

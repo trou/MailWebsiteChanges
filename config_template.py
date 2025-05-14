@@ -19,6 +19,8 @@ from mwctools import Content
 from mwctools import Parser
 
 
+# Each site dictionary can have an optional 'diff' boolean option:
+#   'diff': True  # If set, only show the diff (unified diff format) when the website changes, and store the latest version in config.workingDirectory.
 sites = [
 
          {'name': 'example-css',
@@ -30,7 +32,8 @@ sites = [
          {'name': 'example-xpath',
           'parsers': [uri(uri='https://example-webpage.com/test', contenttype='html'),
                       xpath(contentxpath='//div[contains(concat(\' \', normalize-space(@class), \' \'), \' package-version-header \')]')
-                     ]
+                     ],
+          'diff': True
          },
 
          {'name': 'my-script',
@@ -56,4 +59,5 @@ receiver = 'me2@mymail.com'
 enableRSSFeed = False
 rssfile = 'feed.xml'
 maxFeeds = 100
+
 

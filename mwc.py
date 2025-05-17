@@ -185,7 +185,7 @@ def pollWebsites():
         logger.debug('polling site [' + site['name'] + '] ...')
         receiver = site.get('receiver', config.receiver)
         diff_mode = site.get('diff', False)
-        logger.info(f"diff_mode: {diff_mode}")
+        logger.debug(f"diff_mode: {diff_mode}")
         try:
             contentList = runParsers(site['parsers'])
         except Exception as e:

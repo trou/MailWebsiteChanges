@@ -1,5 +1,16 @@
 # MailWebsiteChanges
 
+## Fork note
+
+This is a fork of <https://github.com/mtill/MailWebsiteChanges/>, thanks!
+
+New features:
+
+* mail diff only
+* add `data` parameter
+
+## Info
+
 Python script to keep track of website changes; sends email notifications on updates and/or also provides an RSS feed
 
 To specify which parts of a website should be monitored, <b>XPath selectors</b> (e.g. "//h1"), <b>CSS selectors</b> (e.g. "h1"), <b>and regular expressions can be used</b> (just choose the tools you like!).
